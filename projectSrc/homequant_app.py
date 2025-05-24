@@ -15,29 +15,44 @@ from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error, m
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 
-DATA_PATH = "./usa_housing_kaggle.csv"
+DATA_PATH = "./housing.csv"
 df = pd.read_csv(DATA_PATH)
 
-#feature engineering
-df["HouseAge"] = 2025 - df["YearBuilt"]
-df = df.drop(["YearBuilt"], axis=1)
+#new california housing data
+df["total_bedrooms"] = df["total_bedrooms"].fillna(df["total_bedrooms"].median())
 
-# df["Price_per_sqft"] = df ["Price"] / df["SquareFeet"]
+df = df.drop(columns = ["ocean_proximity"])
+
+cols_to_check = ["total_rooms", "total_bedrooms", "population"]
+df = df[(df[cols_to_check] != 0).all(axis=1)]
+
+# df["rooms_per_household"] = df["total_room"] / df["households"]
+
+
+X = df.drop("median_house_value", axis=1)
+Y = df["median_house_value"]
+
+
+#feature engineering - usa_housing.csv
+# df["HouseAge"] = 2025 - df["YearBuilt"]
+# df = df.drop(["YearBuilt"], axis=1)
 #
-# df["Price_per_bedroom"] = df["Price"] / df["Bedrooms"]
-
-df["Age_Lot_Interaction"] = df["HouseAge"] * df["LotSize"]
-
-df["Crime_School_Interaction"] = df["CrimeRate"] * df["SchoolRating"]
-df = df.drop(columns=["CrimeRate", "SchoolRating"])
-
-df["Age_Lot_Interaction"] = df["HouseAge"] * df["LotSize"]
-df = df.drop(columns=["LotSize", "HouseAge"])
-
-df=df.drop(["ZipCode"],axis=1)
-
-X = df.drop(["Price"], axis=1)
-Y = df["Price"]
+# # df["Price_per_sqft"] = df ["Price"] / df["SquareFeet"]
+# #
+# # df["Price_per_bedroom"] = df["Price"] / df["Bedrooms"]
+#
+# df["Age_Lot_Interaction"] = df["HouseAge"] * df["LotSize"]
+#
+# df["Crime_School_Interaction"] = df["CrimeRate"] * df["SchoolRating"]
+# df = df.drop(columns=["CrimeRate", "SchoolRating"])
+#
+# df["Age_Lot_Interaction"] = df["HouseAge"] * df["LotSize"]
+# df = df.drop(columns=["LotSize", "HouseAge"])
+#
+# df=df.drop(["ZipCode"],axis=1)
+#
+# X = df.drop(["Price"], axis=1)
+# Y = df["Price"]
 
 X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
 scaler = StandardScaler()
@@ -70,15 +85,10 @@ print (f"Root Mean squared error: {rf_rmse}")
 
 
 
-plt.figure(figsize=(8,5))
-plt.hist(df['Price'], bins=30, color='skyblue', edgecolor='black')
-plt.title('Distribution of House Prices')
-plt.xlabel('House Prices')
-plt.ylabel('Frequency')
+plt.figure(figsize=(14,8))
+sns.scatterplot(x="latitude", y="longitude", data = df, hue = "median_house_value", palette= "coolwarm")
 plt.show()
 #
-plt.figure(figsize=(7,5))
-
 sns.scatterplot(x=Y_test, y=rf_predictions)
 plt.plot([Y_test.min(), Y_test.max()], [Y_test.min(), Y_test.max()], 'r--')
 plt.title('Actual vs. Predicted Prices')
@@ -86,99 +96,115 @@ plt.xlabel('Actual Price')
 plt.ylabel('Predicted Price')
 plt.tight_layout()
 plt.show()
-#
-#
+# #
+# #
 plt.figure(figsize=(12,10))
 sns.heatmap(df.corr(), annot=True, cmap='coolwarm', linewidths= 0.1)
 plt.show()
+
+
+def predict_price():
+    print("="*50)
+    print("Welcome to HomeQuant Realty Price Predictor")
+    print("Estimate California home values instantly using key property and neighborhood features.")
+    print("Please enter the following information. Type Ctrl+C at any time to exit.")
+    print("="*50)
+    try:
+        longitude = float(input("Longitude (e.g., -122.23): "))
+        latitude = float(input("Latitude (e.g., 37.88): "))
+        housing_median_age = float(input("Median age of homes in area (years, e.g., 41): "))
+        total_rooms = float(input("Total rooms in the block group (e.g., 880): "))
+        total_bedrooms = float(input("Total bedrooms in the block group (e.g., 129): "))
+        population = float(input("Population of the block group (e.g., 322): "))
+        households = float(input("Number of households (e.g., 126): "))
+        median_income = float(input("Median income (in $10,000s, e.g., 8.32 for $83,200): "))
+
+
+        input_data = {
+            'longitude': [longitude],
+            'latitude': [latitude],
+            'housing_median_age': [housing_median_age],
+            'total_rooms': [total_rooms],
+            'total_bedrooms': [total_bedrooms],
+            'population': [population],
+            'households': [households],
+            'median_income': [median_income],
+        }
+        input_df = pd.DataFrame(input_data)
+        input_df = input_df[X.columns]
+
+        input_scaled = scaler.transform(input_df)
+        pred = rf_model.predict(input_scaled)
+
+        print("\n" + "-"*50)
+        print(f"Predicted Median House Value: ${pred[0]:,.2f}")
+        print(f"Estimate has an error range of: ${rf_rmse:.3f}")
+        print("-"*50)
+        print("Thank you for using HomeQuant Realty Price Predictor!")
+        print("="*50)
+    except Exception as e:
+        print(f"\n Invalid input. Please enter numeric values only. Error: {e}")
+        print("Tip: Use Ctrl+C to exit the program at any time.")
+
+
+
 
 
 
 # def predict_price():
 #     print("\n-- HomeQuant Realty: Predict House Price Model --")
 #     try:
-#         bedrooms = float(input("Enter Bedrooms:"))
-#         bathrooms = float(input("Enter Bathrooms:"))
-#         square_feet = float(input("Enter Square Feet:"))
-#         year_built = float(input("Enter Year Built:"))
-#         garage_space = float(input("Enter Garage Space:"))
-#         lot_size = float(input("Enter Lot Size:"))
-#         # zipcode = input("Enter Zip Code: ")
-#         # Convert to encoded value (mean price)
-#         # zipcode_enc = pd.get_dummies(df,columns=['ZipCode'])
-#         # zipcode_enc = zipcode_mean.get(zipcode, df['Price'].mean())
-#         crime_rate = input("Enter Crime Rate:")
-#         school_rating = float(input("Enter School Rating:"))
-#         input_features = [bedrooms,bathrooms,square_feet,year_built,garage_space,lot_size,zipcode,crime_rate,school_rating]
+#         # Gather user input
+#         bedrooms = float(input("Enter Bedrooms: "))
+#         bathrooms = float(input("Enter Bathrooms: "))
+#         square_feet = float(input("Enter Square Feet: "))
+#         garage_space = float(input("Enter Garage Spaces: "))
+#
+#
+#         # Year built and lot size are needed for interactions
+#         year_built = float(input("Enter Year Built: "))
+#         lot_size = float(input("Enter Lot Size: "))
+#         crime_rate = float(input("Enter Crime Rate: "))
+#         school_rating = float(input("Enter School Rating: "))
+#
+#         # Feature engineering to match training data
+#
+#
+#
+#
+#         # house_age = 2025 - year_built
+#         # price_per_sqft = 0  # Not used for prediction, only for EDA
+#         # price_per_bedroom = 0  # Not used for prediction, only for EDA
+#         # age_lot_interaction = house_age * lot_size
+#         # crime_school_interaction = crime_rate * school_rating
+#
+#         # Build the input DataFrame with the correct columns/order
 #         input_data = {
-#                 'Bedrooms': [bedrooms],
-#                 'Bathrooms': [bathrooms],
-#                 'SquareFeet': [square_feet],
-#                 'YearBuilt': [year_built],
-#                 'GarageSpaces': [garage_space],
-#                 'LotSize': [lot_size],
-#                 # 'ZipCode': [zipcode],      # or 'ZipCodeEnc' if you encoded
-#                 'CrimeRate': [crime_rate],
-#                 'SchoolRating': [school_rating]
+#             'Bedrooms': [bedrooms],
+#             'Bathrooms': [bathrooms],
+#             'SquareFeet': [square_feet],
+#             'GarageSpaces': [garage_space],
+#             # 'Price_per_sqft': [price_per_sqft],  # Placeholder, not used in prediction
+#             # 'Price_per_bedroom': [price_per_bedroom],  # Placeholder, not used in prediction
+#             'Age_Lot_Interaction': [age_lot_interaction],
+#             'Crime_School_Interaction': [crime_school_interaction]
 #         }
-#         input_df = pd.DataFrame(input_data)[features]
-#         pred = model.predict(input_df)
-#         print(f"Predicted House Price is: {pred[0]:,.2f}")
+#         input_df = pd.DataFrame(input_data)
+#
+#         # Only keep columns that are in X (model input features)
+#         input_df = input_df[X.columns]
+#
+#         # Scale the input
+#         input_scaled = scaler.transform(input_df)
+#
+#         # Predict using the trained Random Forest model
+#         pred = rf_model.predict(input_scaled)
+#
+#         print(f"\nPredicted House Price: ${pred[0]:,.2f}")
+#         print(f"Model R² (accuracy): {rf_r2:.3f}")
+#
 #     except Exception as e:
-#         print(f"Invalid Input. Please Enter a numeric. Value Error: {e}")
-# predict_price()
-
-
-def predict_price():
-    print("\n-- HomeQuant Realty: Predict House Price Model --")
-    try:
-        # Gather user input
-        bedrooms = float(input("Enter Bedrooms: "))
-        bathrooms = float(input("Enter Bathrooms: "))
-        square_feet = float(input("Enter Square Feet: "))
-        garage_space = float(input("Enter Garage Spaces: "))
-
-        # For engineered features, ask for the raw inputs you need
-        # Year built and lot size are needed for interactions
-        year_built = float(input("Enter Year Built: "))
-        lot_size = float(input("Enter Lot Size: "))
-        crime_rate = float(input("Enter Crime Rate: "))
-        school_rating = float(input("Enter School Rating: "))
-
-        # Feature engineering to match your training data
-        house_age = 2025 - year_built
-        price_per_sqft = 0  # Not used for prediction, only for EDA
-        price_per_bedroom = 0  # Not used for prediction, only for EDA
-        age_lot_interaction = house_age * lot_size
-        crime_school_interaction = crime_rate * school_rating
-
-        # Build the input DataFrame with the correct columns/order
-        input_data = {
-            'Bedrooms': [bedrooms],
-            'Bathrooms': [bathrooms],
-            'SquareFeet': [square_feet],
-            'GarageSpaces': [garage_space],
-            # 'Price_per_sqft': [price_per_sqft],  # Placeholder, not used in prediction
-            # 'Price_per_bedroom': [price_per_bedroom],  # Placeholder, not used in prediction
-            'Age_Lot_Interaction': [age_lot_interaction],
-            'Crime_School_Interaction': [crime_school_interaction]
-        }
-        input_df = pd.DataFrame(input_data)
-
-        # Only keep columns that are in X (model input features)
-        input_df = input_df[X.columns]
-
-        # Scale the input
-        input_scaled = scaler.transform(input_df)
-
-        # Predict using the trained Random Forest model
-        pred = rf_model.predict(input_scaled)
-
-        print(f"\nPredicted House Price: ${pred[0]:,.2f}")
-        print(f"Model R² (accuracy): {rf_r2:.3f}")
-
-    except Exception as e:
-        print(f"Invalid input. Please enter numeric values only. Error: {e}")
+#         print(f"Invalid input. Please enter numeric values only. Error: {e}")
 
 
 # To use:
