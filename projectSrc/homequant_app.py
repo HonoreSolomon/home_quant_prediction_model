@@ -105,7 +105,7 @@ plt.show()
 
 def predict_price():
     print("="*50)
-    print("🏠 Welcome to HomeQuant Realty Price Predictor 🏠")
+    print("Welcome to HomeQuant Realty Price Predictor")
     print("Estimate California home values instantly using key property and neighborhood features.")
     print("Please enter the following information. Type Ctrl+C at any time to exit.")
     print("="*50)
@@ -119,10 +119,6 @@ def predict_price():
         households = float(input("Number of households (e.g., 126): "))
         median_income = float(input("Median income (in $10,000s, e.g., 8.32 for $83,200): "))
 
-        # Feature engineering for ratios
-        rooms_per_household = total_rooms / households if households else 0
-        bedrooms_per_room = total_bedrooms / total_rooms if total_rooms else 0
-        population_per_household = population / households if households else 0
 
         input_data = {
             'longitude': [longitude],
@@ -133,24 +129,21 @@ def predict_price():
             'population': [population],
             'households': [households],
             'median_income': [median_income],
-            'rooms_per_household': [rooms_per_household],
-            'bedrooms_per_room': [bedrooms_per_room],
-            'population_per_household': [population_per_household]
         }
         input_df = pd.DataFrame(input_data)
-        input_df = input_df[X.columns]  # Ensure correct order
+        input_df = input_df[X.columns]
 
         input_scaled = scaler.transform(input_df)
         pred = rf_model.predict(input_scaled)
 
         print("\n" + "-"*50)
-        print(f"🏡 Predicted Median House Value: ${pred[0]:,.2f}")
-        print(f"Model R² (accuracy): {rf_r2:.3f}")
+        print(f"Predicted Median House Value: ${pred[0]:,.2f}")
+        print(f"Estimate has an error range of: ${rf_rmse:.3f}")
         print("-"*50)
         print("Thank you for using HomeQuant Realty Price Predictor!")
         print("="*50)
     except Exception as e:
-        print(f"\n❌ Invalid input. Please enter numeric values only. Error: {e}")
+        print(f"\n Invalid input. Please enter numeric values only. Error: {e}")
         print("Tip: Use Ctrl+C to exit the program at any time.")
 
 
